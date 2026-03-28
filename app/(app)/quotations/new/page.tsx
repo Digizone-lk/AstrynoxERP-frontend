@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { clientsApi, quotationsApi } from "@/lib/api";
+import { clientsApi, quotationsApi, productsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { Client, Product } from "@/lib/types";
 import { LineItemsEditor, type LineItemDraft } from "@/components/line-items-editor";
@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { getApiError } from "@/lib/utils";
 
 export default function NewQuotationPage() {
   const router = useRouter();
@@ -27,7 +28,6 @@ export default function NewQuotationPage() {
     issue_date: today,
     valid_until: "",
     notes: "",
-    currency: orgCurrency,
   });
   const [items, setItems] = useState<LineItemDraft[]>([{ product_name: "", description: "", qty: "1", unit_price: "0" }]);
 
@@ -36,16 +36,16 @@ export default function NewQuotationPage() {
     queryFn: () => clientsApi.list().then((r) => r.data),
   });
 
-  const { data: eligibleProducts = [] } = useQuery<Product[]>({
-    queryKey: ["eligible-products", clientId],
-    queryFn: () => clientsApi.getEligibleProducts(clientId).then((r) => r.data),
-    enabled: !!clientId,
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ["products"],
+    queryFn: () => productsApi.list().then((r) => r.data),
   });
 
   const createMut = useMutation({
     mutationFn: () =>
       quotationsApi.create({
         client_id: clientId,
+        currency: orgCurrency,
         ...form,
         valid_until: form.valid_until || undefined,
         items: items.map((item) => ({
@@ -60,7 +60,7 @@ export default function NewQuotationPage() {
       toast.success(`Quotation ${res.data.quote_number} created`);
       router.push(`/quotations/${res.data.id}`);
     },
-    onError: (err: any) => toast.error(err.response?.data?.detail ?? "Failed to create quotation"),
+    onError: (err) => toast.error(getApiError(err, "Failed to create quotation")),
   });
 
   return (
@@ -84,11 +84,6 @@ export default function NewQuotationPage() {
                   {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {clientId && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Showing {eligibleProducts.length} eligible product(s) for this client
-                </p>
-              )}
             </div>
             <div>
               <Label>Issue Date *</Label>
@@ -112,10 +107,9 @@ export default function NewQuotationPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Line Items</CardTitle>
-            {!clientId && <p className="text-xs text-amber-600">Select a client above to load eligible products</p>}
           </CardHeader>
           <CardContent>
-            <LineItemsEditor items={items} products={eligibleProducts} onChange={setItems} />
+            <LineItemsEditor items={items} products={products} onChange={setItems} currency={orgCurrency} />
           </CardContent>
         </Card>
 

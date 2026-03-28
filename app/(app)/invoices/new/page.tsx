@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { clientsApi, invoicesApi } from "@/lib/api";
+import { clientsApi, invoicesApi, productsApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Client, Product } from "@/lib/types";
 import { LineItemsEditor, type LineItemDraft } from "@/components/line-items-editor";
 import { Button } from "@/components/ui/button";
@@ -14,13 +15,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { getApiError } from "@/lib/utils";
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const today = new Date().toISOString().slice(0, 10);
+  const orgCurrency = user?.org_currency ?? "USD";
 
   const [clientId, setClientId] = useState("");
-  const [form, setForm] = useState({ issue_date: today, due_date: "", notes: "", currency: "USD" });
+  const [form, setForm] = useState({ issue_date: today, due_date: "", notes: "" });
   const [items, setItems] = useState<LineItemDraft[]>([{ product_name: "", description: "", qty: "1", unit_price: "0" }]);
 
   const { data: clients = [] } = useQuery<Client[]>({
@@ -28,16 +32,16 @@ export default function NewInvoicePage() {
     queryFn: () => clientsApi.list().then((r) => r.data),
   });
 
-  const { data: eligibleProducts = [] } = useQuery<Product[]>({
-    queryKey: ["eligible-products", clientId],
-    queryFn: () => clientsApi.getEligibleProducts(clientId).then((r) => r.data),
-    enabled: !!clientId,
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ["products"],
+    queryFn: () => productsApi.list().then((r) => r.data),
   });
 
   const createMut = useMutation({
     mutationFn: () =>
       invoicesApi.create({
         client_id: clientId,
+        currency: orgCurrency,
         ...form,
         due_date: form.due_date || undefined,
         items: items.map((item) => ({
@@ -52,7 +56,7 @@ export default function NewInvoicePage() {
       toast.success(`Invoice ${res.data.invoice_number} created`);
       router.push(`/invoices/${res.data.id}`);
     },
-    onError: (err: any) => toast.error(err.response?.data?.detail ?? "Failed to create invoice"),
+    onError: (err) => toast.error(getApiError(err, "Failed to create invoice")),
   });
 
   return (
@@ -76,11 +80,6 @@ export default function NewInvoicePage() {
                   {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {clientId && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Showing {eligibleProducts.length} eligible product(s) for this client
-                </p>
-              )}
             </div>
             <div>
               <Label>Issue Date *</Label>
@@ -92,7 +91,7 @@ export default function NewInvoicePage() {
             </div>
             <div>
               <Label>Currency</Label>
-              <Input className="mt-1" placeholder="USD" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} maxLength={5} />
+              <p className="mt-1 h-9 flex items-center px-3 rounded-md border bg-slate-50 text-sm text-slate-600">{orgCurrency}</p>
             </div>
             <div className="sm:col-span-2">
               <Label>Notes</Label>
@@ -104,10 +103,9 @@ export default function NewInvoicePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Line Items</CardTitle>
-            {!clientId && <p className="text-xs text-amber-600">Select a client above to load eligible products</p>}
           </CardHeader>
           <CardContent>
-            <LineItemsEditor items={items} products={eligibleProducts} onChange={setItems} />
+            <LineItemsEditor items={items} products={products} onChange={setItems} currency={orgCurrency} />
           </CardContent>
         </Card>
 

@@ -20,7 +20,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const canWrite = canEdit(user?.role);
   const [selectedClient, setSelectedClient] = useState("");
 
-  const { data: product } = useQuery<Product>({
+  const { data: product, isLoading: productLoading } = useQuery<Product>({
     queryKey: ["product", id],
     queryFn: () => productsApi.get(id).then((r) => r.data),
   });
@@ -57,6 +57,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const assignedIds = new Set(assignedClients.map((c) => c.id));
   const availableClients = allClients.filter((c) => !assignedIds.has(c.id));
+
+  if (productLoading) return <div className="text-slate-400 text-sm">Loading…</div>;
+  if (!product) return <div className="text-slate-500">Product not found.</div>;
 
   return (
     <div>

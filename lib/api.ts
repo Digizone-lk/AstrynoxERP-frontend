@@ -1,7 +1,8 @@
 import axios from "axios";
+import { env } from "@/lib/env";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: env.NEXT_PUBLIC_API_URL,
   withCredentials: true, // send httpOnly cookies
   headers: { "Content-Type": "application/json" },
 });
@@ -33,7 +34,7 @@ api.interceptors.response.use(
       } catch (err) {
         processQueue(err);
         if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register") {
-          window.location.href = "/login";
+          window.location.replace("/login?next=" + encodeURIComponent(window.location.pathname));
         }
         return Promise.reject(err);
       } finally {
@@ -126,6 +127,33 @@ export const usersApi = {
   list: () => api.get("/api/users/"),
   create: (data: object) => api.post("/api/users/", data),
   update: (id: string, data: object) => api.patch(`/api/users/${id}`, data),
+  resetPassword: (id: string, new_password: string) =>
+    api.post(`/api/users/${id}/reset-password`, { new_password }),
+  deactivate: (id: string) => api.post(`/api/users/${id}/deactivate`),
+  getActivity: (id: string, params?: { skip?: number; limit?: number }) =>
+    api.get(`/api/users/${id}/activity`, { params }),
+};
+
+export const profileApi = {
+  get: () => api.get("/api/users/me/profile"),
+  update: (data: object) => api.patch("/api/users/me/profile", data),
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.post("/api/users/me/change-password", data),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post("/api/users/me/avatar", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  deleteAvatar: () => api.delete("/api/users/me/avatar"),
+  getSessions: () => api.get("/api/users/me/sessions"),
+  revokeSession: (id: string) => api.delete(`/api/users/me/sessions/${id}`),
+  revokeAllSessions: () => api.delete("/api/users/me/sessions"),
+  getNotifications: () => api.get("/api/users/me/notifications"),
+  updateNotifications: (data: object) => api.patch("/api/users/me/notifications", data),
+  getActivity: (params?: { skip?: number; limit?: number }) =>
+    api.get("/api/users/me/activity", { params }),
 };
 
 export const auditApi = {

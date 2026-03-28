@@ -8,14 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Receipt } from "lucide-react";
 import Link from "next/link";
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-700",
-  sent: "bg-blue-100 text-blue-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  cancelled: "bg-slate-100 text-slate-400",
-};
+import { INVOICE_STATUS_COLORS } from "@/lib/constants";
 
 export default function InvoicesPage() {
   const { user } = useAuth();
@@ -59,7 +52,7 @@ export default function InvoicesPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <p className="font-semibold text-slate-700">{formatCurrency(inv.total, inv.currency)}</p>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[inv.status]}`}>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${INVOICE_STATUS_COLORS[inv.status]}`}>
                         {inv.status}
                       </span>
                     </div>

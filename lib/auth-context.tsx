@@ -32,12 +32,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string) {
     await authApi.login(email, password);
+    // Persist across sessions so middleware can distinguish returning users from new visitors
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `has_account=1; max-age=2592000; path=/; SameSite=Lax${secure}`;
     await refresh();
   }
 
   async function logout() {
     await authApi.logout();
     setUser(null);
+    // Keep has_account — user still has an account, just logged out
   }
 
   return (

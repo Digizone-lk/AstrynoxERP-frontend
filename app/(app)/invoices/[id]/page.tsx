@@ -11,14 +11,7 @@ import { ArrowLeft, Download, Send, CheckCircle, XCircle, AlertCircle } from "lu
 import { toast } from "sonner";
 import Link from "next/link";
 import { LineItemsEditor } from "@/components/line-items-editor";
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  sent: "bg-blue-100 text-blue-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  cancelled: "bg-slate-100 text-slate-400",
-};
+import { INVOICE_STATUS_COLORS } from "@/lib/constants";
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -26,6 +19,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const qc = useQueryClient();
   const canWrite = canEdit(user?.role);
   const canFinanceOps = canFinance(user?.role);
+  const orgCurrency = user?.org_currency ?? "USD";
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["invoice", id],
@@ -74,7 +68,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       <div className="flex items-center gap-3 mb-6">
         <Link href="/invoices"><Button variant="ghost" size="sm"><ArrowLeft size={16} className="mr-1" />Back</Button></Link>
         <h1 className="text-2xl font-bold text-slate-800">{invoice.invoice_number}</h1>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[invoice.status]}`}>
+        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${INVOICE_STATUS_COLORS[invoice.status]}`}>
           {invoice.status}
         </span>
         {invoice.quotation_id && (
@@ -122,7 +116,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               <div className="flex justify-between"><span className="text-slate-500">Issue Date</span><span>{formatDate(invoice.issue_date)}</span></div>
               {invoice.due_date && <div className="flex justify-between"><span className="text-slate-500">Due Date</span><span>{formatDate(invoice.due_date)}</span></div>}
               {invoice.paid_at && <div className="flex justify-between"><span className="text-slate-500">Paid At</span><span className="text-green-600">{formatDate(invoice.paid_at)}</span></div>}
-              <div className="flex justify-between"><span className="text-slate-500">Currency</span><span>{invoice.currency}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Currency</span><span>{invoice.currency || orgCurrency}</span></div>
             </CardContent>
           </Card>
         </div>
@@ -130,7 +124,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         <Card>
           <CardHeader><CardTitle className="text-base">Line Items</CardTitle></CardHeader>
           <CardContent>
-            <LineItemsEditor items={items} products={[]} onChange={() => {}} disabled />
+            <LineItemsEditor items={items} products={[]} onChange={() => {}} disabled currency={invoice.currency || orgCurrency} />
           </CardContent>
         </Card>
 

@@ -12,14 +12,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LineItemsEditor } from "@/components/line-items-editor";
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  sent: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  converted: "bg-purple-100 text-purple-700",
-};
+import { QUOTATION_STATUS_COLORS } from "@/lib/constants";
 
 export default function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -27,6 +20,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   const qc = useQueryClient();
   const router = useRouter();
   const canWrite = canEdit(user?.role);
+  const orgCurrency = user?.org_currency ?? "USD";
 
   const { data: quotation, isLoading } = useQuery<Quotation>({
     queryKey: ["quotation", id],
@@ -82,7 +76,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       <div className="flex items-center gap-3 mb-6">
         <Link href="/quotations"><Button variant="ghost" size="sm"><ArrowLeft size={16} className="mr-1" />Back</Button></Link>
         <h1 className="text-2xl font-bold text-slate-800">{quotation.quote_number}</h1>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[quotation.status]}`}>
+        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${QUOTATION_STATUS_COLORS[quotation.status]}`}>
           {quotation.status}
         </span>
       </div>
@@ -124,7 +118,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
             <CardContent className="space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-slate-500">Issue Date</span><span>{formatDate(quotation.issue_date)}</span></div>
               {quotation.valid_until && <div className="flex justify-between"><span className="text-slate-500">Valid Until</span><span>{formatDate(quotation.valid_until)}</span></div>}
-              <div className="flex justify-between"><span className="text-slate-500">Currency</span><span>{quotation.currency}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Currency</span><span>{quotation.currency || orgCurrency}</span></div>
             </CardContent>
           </Card>
         </div>
@@ -132,7 +126,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
         <Card>
           <CardHeader><CardTitle className="text-base">Line Items</CardTitle></CardHeader>
           <CardContent>
-            <LineItemsEditor items={items} products={[]} onChange={() => {}} disabled />
+            <LineItemsEditor items={items} products={[]} onChange={() => {}} disabled currency={quotation.currency || orgCurrency} />
           </CardContent>
         </Card>
 
