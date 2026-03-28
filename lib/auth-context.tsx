@@ -21,8 +21,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await authApi.me();
       setUser(data);
+      const secure = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `user_role=${data.role}; path=/; SameSite=Lax${secure}`;
     } catch {
       setUser(null);
+      document.cookie = "user_role=; path=/; max-age=0";
     }
   }
 
@@ -41,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     await authApi.logout();
     setUser(null);
+    document.cookie = "user_role=; path=/; max-age=0";
     // Keep has_account — user still has an account, just logged out
   }
 
