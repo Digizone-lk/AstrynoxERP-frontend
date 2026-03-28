@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <div className="text-slate-500 text-sm">Loading…</div>
