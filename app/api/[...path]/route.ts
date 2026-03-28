@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL!;
+// Always use https — guards against NEXT_PUBLIC_API_URL accidentally set to http://
+const BACKEND = process.env.NEXT_PUBLIC_API_URL!.replace(/^http:\/\//, "https://");
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   const { pathname, search } = new URL(req.url);
@@ -13,7 +14,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   const init: RequestInit = {
     method: req.method,
     headers,
-    redirect: "manual", // forward redirects to the browser instead of following them
+    redirect: "follow", // follow redirects server-side; never expose Railway URL to browser
   };
 
   if (!["GET", "HEAD", "DELETE"].includes(req.method)) {
