@@ -1,20 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { isAdmin, ROLE_LABELS } from "@/lib/utils";
+import { isAdmin, ROLE_LABELS, getApiError } from "@/lib/utils";
 import type { User, UserRole } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Users } from "lucide-react";
+import { Plus, Pencil, KeyRound, UserX, Activity } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const ROLES: UserRole[] = ["super_admin", "accountant", "sales", "viewer"];
@@ -25,6 +26,38 @@ const ROLE_COLORS: Record<UserRole, string> = {
   sales: "bg-green-100 text-green-700",
   viewer: "bg-slate-100 text-slate-600",
 };
+
+const createSchema = z.object({
+  full_name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(8, "Min 8 characters"),
+  role: z.enum(["super_admin", "accountant", "sales", "viewer"]),
+});
+
+const editSchema = z.object({
+  full_name: z.string().min(1, "Name is required"),
+  email: z.string().optional(),
+  password: z.string().optional(),
+  role: z.enum(["super_admin", "accountant", "sales", "viewer"]),
+});
+
+const resetPasswordSchema = z
+  .object({
+    new_password: z
+      .string()
+      .min(8, "Min 8 characters")
+      .regex(/[A-Z]/, "Must contain uppercase")
+      .regex(/[a-z]/, "Must contain lowercase")
+      .regex(/[0-9]/, "Must contain a number"),
+    confirm_password: z.string(),
+  })
+  .refine((d) => d.new_password === d.confirm_password, {
+    message: "Passwords do not match",
+    path: ["confirm_password"],
+  });
+
+type CreateFormData = z.infer<typeof createSchema>;
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -42,30 +75,48 @@ export default function UsersPage() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "viewer" as UserRole });
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+
+  // ── Create/edit form ──
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<CreateFormData>({
+    resolver: zodResolver(editing ? editSchema : createSchema) as never,
+    defaultValues: { full_name: "", email: "", password: "", role: "viewer" },
+  });
 
   function openCreate() {
     setEditing(null);
-    setForm({ full_name: "", email: "", password: "", role: "viewer" });
+    reset({ full_name: "", email: "", password: "", role: "viewer" });
     setOpen(true);
   }
 
   function openEdit(u: User) {
     setEditing(u);
-    setForm({ full_name: u.full_name, email: u.email, password: "", role: u.role });
+    reset({ full_name: u.full_name, email: u.email, password: "", role: u.role });
     setOpen(true);
   }
 
   const createMut = useMutation({
-    mutationFn: () => usersApi.create({ full_name: form.full_name, email: form.email, password: form.password, role: form.role }),
+    mutationFn: (data: CreateFormData) => usersApi.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success("User created"); setOpen(false); },
-    onError: (e: any) => toast.error(e.response?.data?.detail ?? "Failed to create user"),
+    onError: (e) => toast.error(getApiError(e, "Failed to create user")),
   });
 
   const updateMut = useMutation({
-    mutationFn: () => usersApi.update(editing!.id, { full_name: form.full_name, role: form.role }),
+    mutationFn: (data: { full_name: string; role: UserRole }) => usersApi.update(editing!.id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success("User updated"); setOpen(false); },
+    onError: (e) => toast.error(getApiError(e, "Failed to update user")),
   });
+
+  const deactivateMut = useMutation({
+    mutationFn: (id: string) => usersApi.deactivate(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success("User deactivated"); setDeactivateTarget(null); },
+    onError: (e) => toast.error(getApiError(e, "Failed to deactivate user")),
+  });
+
+  function onSubmit(data: CreateFormData) {
+    editing ? updateMut.mutate({ full_name: data.full_name, role: data.role }) : createMut.mutate(data);
+  }
 
   if (!user || !isAdmin(user.role)) return null;
 
@@ -81,7 +132,7 @@ export default function UsersPage() {
       ) : (
         <div className="space-y-3">
           {users.map((u) => (
-            <Card key={u.id}>
+            <Card key={u.id} className={!u.is_active ? "opacity-60" : ""}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -89,18 +140,34 @@ export default function UsersPage() {
                       {u.full_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-medium text-slate-800">{u.full_name}</p>
+                      <p className="font-medium text-slate-800 flex items-center gap-2">
+                        {u.full_name}
+                        {!u.is_active && <span className="text-xs text-slate-400 font-normal">(inactive)</span>}
+                      </p>
                       <p className="text-sm text-slate-500">{u.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${ROLE_COLORS[u.role]}`}>
                       {ROLE_LABELS[u.role]}
                     </span>
                     {u.id !== user.id && (
-                      <button onClick={() => openEdit(u)} className="text-slate-400 hover:text-blue-600 p-1">
-                        <Pencil size={14} />
-                      </button>
+                      <>
+                        <button onClick={() => openEdit(u)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Edit ${u.full_name}`}>
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => setResetTarget(u)} className="text-slate-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Reset password for ${u.full_name}`}>
+                          <KeyRound size={14} />
+                        </button>
+                        {u.is_active && (
+                          <button onClick={() => setDeactivateTarget(u)} className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Deactivate ${u.full_name}`}>
+                            <UserX size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => router.push(`/settings/users/${u.id}/activity`)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`View activity for ${u.full_name}`}>
+                          <Activity size={14} />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -110,48 +177,124 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Create / Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editing ? "Edit User" : "Invite User"}</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label>Full Name</Label>
-              <Input className="mt-1" placeholder="Jane Smith" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label>Full Name</Label>
+                <Input className="mt-1" placeholder="Jane Smith" {...register("full_name")} />
+                {errors.full_name && <p className="text-xs text-red-500 mt-1">{errors.full_name.message}</p>}
+              </div>
+              {!editing && (
+                <>
+                  <div>
+                    <Label>Email</Label>
+                    <Input type="email" className="mt-1" placeholder="jane@company.com" {...register("email")} />
+                    {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
+                  </div>
+                  <div>
+                    <Label>Password</Label>
+                    <Input type="password" className="mt-1" placeholder="Min 8 chars" {...register("password")} />
+                    {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
+                  </div>
+                </>
+              )}
+              <div>
+                <Label>Role</Label>
+                <Controller
+                  name="role"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
             </div>
-            {!editing && (
-              <>
-                <div>
-                  <Label>Email</Label>
-                  <Input type="email" className="mt-1" placeholder="jane@company.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Password</Label>
-                  <Input type="password" className="mt-1" placeholder="Min 8 chars" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-                </div>
-              </>
-            )}
-            <div>
-              <Label>Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as UserRole })}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting || createMut.isPending || updateMut.isPending}>
+                {editing ? "Save" : "Create User"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password dialog */}
+      {resetTarget && (
+        <ResetPasswordDialog
+          user={resetTarget}
+          onClose={() => setResetTarget(null)}
+        />
+      )}
+
+      {/* Deactivate confirm dialog */}
+      <Dialog open={!!deactivateTarget} onOpenChange={() => setDeactivateTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Deactivate User</DialogTitle></DialogHeader>
+          <p className="text-sm text-slate-600 py-2">
+            Are you sure you want to deactivate <strong>{deactivateTarget?.full_name}</strong>? They will no longer be able to log in.
+          </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => editing ? updateMut.mutate() : createMut.mutate()} disabled={createMut.isPending || updateMut.isPending}>
-              {editing ? "Save" : "Create User"}
+            <Button variant="outline" onClick={() => setDeactivateTarget(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deactivateTarget && deactivateMut.mutate(deactivateTarget.id)}
+              disabled={deactivateMut.isPending}
+            >
+              Deactivate
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Reset Password Dialog ──────────────────────────────────────────────────────
+function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => void }) {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
+
+  const resetMut = useMutation({
+    mutationFn: (data: ResetPasswordFormData) => usersApi.resetPassword(user.id, data.new_password),
+    onSuccess: () => { toast.success(`Password reset for ${user.full_name}`); onClose(); },
+    onError: (e) => toast.error(getApiError(e, "Failed to reset password")),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Reset Password — {user.full_name}</DialogTitle></DialogHeader>
+        <form onSubmit={handleSubmit((d) => resetMut.mutate(d))}>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>New Password</Label>
+              <Input type="password" className="mt-1" placeholder="••••••••" {...register("new_password")} />
+              {errors.new_password && <p className="text-xs text-red-500 mt-1">{errors.new_password.message}</p>}
+              <p className="text-xs text-slate-400 mt-1">Min 8 · uppercase · lowercase · number</p>
+            </div>
+            <div>
+              <Label>Confirm Password</Label>
+              <Input type="password" className="mt-1" placeholder="••••••••" {...register("confirm_password")} />
+              {errors.confirm_password && <p className="text-xs text-red-500 mt-1">{errors.confirm_password.message}</p>}
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting || resetMut.isPending}>Reset Password</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
