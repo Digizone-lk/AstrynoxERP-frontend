@@ -10,7 +10,7 @@ function validateEnv() {
   });
 
   if (!result.success) {
-    const missing = result.error.errors.map((e) => e.message).join(", ");
+    const missing = result.error.issues.map((e) => e.message).join(", ");
     throw new Error(`Environment configuration error: ${missing}`);
   }
 

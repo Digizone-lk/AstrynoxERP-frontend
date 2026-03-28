@@ -65,9 +65,9 @@ export default function AuditLogPage() {
                     {new Date(log.created_at).toLocaleString()}
                   </span>
                 </div>
-                {log.extra_data && typeof log.extra_data === "object" && Object.keys(log.extra_data as object).length > 0 && (
+                {!!(log.extra_data && typeof log.extra_data === "object" && Object.keys(log.extra_data as object).length > 0) && (
                   <p className="text-xs text-slate-400 mt-1 font-mono">
-                    {JSON.stringify(log.extra_data)}
+                    {JSON.stringify(log.extra_data as Record<string, unknown>)}
                   </p>
                 )}
               </CardContent>
