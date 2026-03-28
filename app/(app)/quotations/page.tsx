@@ -9,14 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, FileText } from "lucide-react";
 import Link from "next/link";
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-700",
-  sent: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  converted: "bg-purple-100 text-purple-700",
-};
+import { QUOTATION_STATUS_COLORS } from "@/lib/constants";
 
 export default function QuotationsPage() {
   const { user } = useAuth();
@@ -60,7 +53,7 @@ export default function QuotationsPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <p className="font-semibold text-slate-700">{formatCurrency(q.total, q.currency)}</p>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[q.status]}`}>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${QUOTATION_STATUS_COLORS[q.status]}`}>
                         {q.status}
                       </span>
                     </div>

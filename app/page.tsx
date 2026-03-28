@@ -1,20 +1,4 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-
+// Middleware handles all redirects from "/" — this page never renders.
 export default function RootPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (loading) return;
-    if (user) {
-      router.replace("/dashboard");
-    } else {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
-
   return null;
 }

@@ -53,3 +53,7 @@ export function canFinance(role?: UserRole) {
 export function isAdmin(role?: UserRole) {
   return role === "super_admin";
 }
+
+export function getApiError(err: unknown, fallback: string): string {
+  return (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? fallback;
+}

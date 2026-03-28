@@ -21,7 +21,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const canWrite = canEdit(user?.role);
   const [selectedProduct, setSelectedProduct] = useState("");
 
-  const { data: client } = useQuery<Client>({
+  const { data: client, isLoading: clientLoading } = useQuery<Client>({
     queryKey: ["client", id],
     queryFn: () => clientsApi.get(id).then((r) => r.data),
   });
@@ -64,6 +64,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const assignedIds = new Set(assignedProducts.map((ap) => ap.product_id));
   const availableToAssign = nonGlobalProducts.filter((p) => !assignedIds.has(p.id));
+
+  if (clientLoading) return <div className="text-slate-400 text-sm">Loading…</div>;
+  if (!client) return <div className="text-slate-500">Client not found.</div>;
 
   return (
     <div>

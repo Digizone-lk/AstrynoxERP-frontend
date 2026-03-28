@@ -147,3 +147,39 @@ export interface AuditLog {
   ip_address?: string;
   created_at: string;
 }
+
+export interface UserProfile extends User {
+  phone: string | null;
+  job_title: string | null;
+  timezone: string;
+  language: string;
+  avatar_url: string | null;
+  updated_at: string | null;
+}
+
+export interface Session {
+  id: string;
+  device_info: string | null;
+  ip_address: string | null;
+  last_active_at: string;
+  created_at: string;
+  is_current: boolean;
+}
+
+export interface NotificationPrefs {
+  invoice_paid: boolean;
+  invoice_overdue: boolean;
+  quotation_approved: boolean;
+  quotation_rejected: boolean;
+  new_user_added: boolean;
+}
+
+export interface ActivityLog {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  extra_data: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}

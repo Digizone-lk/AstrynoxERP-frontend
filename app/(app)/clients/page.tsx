@@ -1,7 +1,11 @@
 "use client";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { clientsApi } from "@/lib/api";
+import { useClients } from "@/lib/hooks/use-clients";
 import { useAuth } from "@/lib/auth-context";
 import { canEdit } from "@/lib/utils";
 import type { Client } from "@/lib/types";
@@ -9,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -21,48 +25,63 @@ import { Plus, Pencil, Users } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
-const EMPTY = { name: "", email: "", phone: "", address: "", contact_person: "" };
+const schema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email").or(z.literal("")),
+  phone: z.string(),
+  address: z.string(),
+  contact_person: z.string(),
+});
+
+type FormData = z.infer<typeof schema>;
+
+const EMPTY: FormData = { name: "", email: "", phone: "", address: "", contact_person: "" };
 
 export default function ClientsPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const canWrite = canEdit(user?.role);
 
-  const { data: clients = [], isLoading } = useQuery<Client[]>({
-    queryKey: ["clients"],
-    queryFn: () => clientsApi.list().then((r) => r.data),
-  });
+  const { data: clients = [], isLoading } = useClients();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
-  const [form, setForm] = useState(EMPTY);
+
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: EMPTY,
+  });
 
   function openCreate() {
     setEditing(null);
-    setForm(EMPTY);
+    reset(EMPTY);
     setOpen(true);
   }
 
   function openEdit(c: Client) {
     setEditing(c);
-    setForm({ name: c.name, email: c.email ?? "", phone: c.phone ?? "", address: c.address ?? "", contact_person: c.contact_person ?? "" });
+    reset({ name: c.name, email: c.email ?? "", phone: c.phone ?? "", address: c.address ?? "", contact_person: c.contact_person ?? "" });
     setOpen(true);
   }
 
   const createMut = useMutation({
-    mutationFn: () => clientsApi.create(form),
+    mutationFn: (data: FormData) => clientsApi.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); toast.success("Client created"); setOpen(false); },
     onError: () => toast.error("Failed to create client"),
   });
 
   const updateMut = useMutation({
-    mutationFn: () => clientsApi.update(editing!.id, form),
+    mutationFn: (data: FormData) => clientsApi.update(editing!.id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); toast.success("Client updated"); setOpen(false); },
     onError: () => toast.error("Failed to update client"),
   });
 
-  function handleSave() {
-    editing ? updateMut.mutate() : createMut.mutate();
+  function onSubmit(data: FormData) {
+    // Strip empty strings so optional fields are omitted (backend EmailStr rejects "")
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== "")
+    );
+    editing ? updateMut.mutate(clean as FormData) : createMut.mutate(clean as FormData);
   }
 
   return (
@@ -100,7 +119,7 @@ export default function ClientsPage() {
                     {c.contact_person && <p className="text-xs text-slate-400 mt-1">Contact: {c.contact_person}</p>}
                   </div>
                   {canWrite && (
-                    <button onClick={() => openEdit(c)} className="ml-2 p-1 text-slate-400 hover:text-blue-600">
+                    <button onClick={() => openEdit(c)} className="ml-2 p-1 text-slate-400 hover:text-blue-600" aria-label={`Edit ${c.name}`}>
                       <Pencil size={15} />
                     </button>
                   )}
@@ -119,31 +138,38 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Client" : "New Client"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            {[
-              { key: "name", label: "Name *", placeholder: "Acme Corp" },
-              { key: "email", label: "Email", placeholder: "contact@acme.com" },
-              { key: "phone", label: "Phone", placeholder: "+1 555 000 0000" },
-              { key: "contact_person", label: "Contact Person", placeholder: "John Doe" },
-              { key: "address", label: "Address", placeholder: "123 Main St…" },
-            ].map(({ key, label, placeholder }) => (
-              <div key={key}>
-                <Label className="text-sm">{label}</Label>
-                <Input
-                  className="mt-1"
-                  placeholder={placeholder}
-                  value={(form as any)[key]}
-                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                />
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label className="text-sm">Name *</Label>
+                <Input className="mt-1" placeholder="Acme Corp" {...register("name")} />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
               </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
-              {editing ? "Save Changes" : "Create Client"}
-            </Button>
-          </DialogFooter>
+              <div>
+                <Label className="text-sm">Email</Label>
+                <Input className="mt-1" placeholder="contact@acme.com" {...register("email")} />
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
+              </div>
+              <div>
+                <Label className="text-sm">Phone</Label>
+                <Input className="mt-1" placeholder="+1 555 000 0000" {...register("phone")} />
+              </div>
+              <div>
+                <Label className="text-sm">Contact Person</Label>
+                <Input className="mt-1" placeholder="John Doe" {...register("contact_person")} />
+              </div>
+              <div>
+                <Label className="text-sm">Address</Label>
+                <Input className="mt-1" placeholder="123 Main St…" {...register("address")} />
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting || createMut.isPending || updateMut.isPending}>
+                {editing ? "Save Changes" : "Create Client"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

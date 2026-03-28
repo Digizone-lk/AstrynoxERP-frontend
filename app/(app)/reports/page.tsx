@@ -23,60 +23,8 @@ import {
   Cell,
   Legend,
 } from "recharts";
-
-const PERIODS = [
-  { value: "this_month", label: "This Month" },
-  { value: "this_quarter", label: "This Quarter" },
-  { value: "this_year", label: "This Year" },
-  { value: "all", label: "All Time" },
-];
-
-const INVOICE_STATUS_COLORS: Record<string, string> = {
-  paid: "#16a34a",
-  sent: "#2563eb",
-  overdue: "#dc2626",
-  draft: "#94a3b8",
-  cancelled: "#e2e8f0",
-};
-
-const QUOTATION_STATUS_COLORS: Record<string, string> = {
-  approved: "#16a34a",
-  sent: "#2563eb",
-  converted: "#7c3aed",
-  rejected: "#dc2626",
-  draft: "#94a3b8",
-};
-
-function KpiCard({
-  title,
-  value,
-  sub,
-  icon: Icon,
-  color = "text-blue-600",
-}: {
-  title: string;
-  value: string;
-  sub?: string;
-  icon: React.ElementType;
-  color?: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-            {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
-          </div>
-          <div className={`p-2 rounded-lg bg-slate-100 ${color}`}>
-            <Icon size={20} />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+import { INVOICE_STATUS_HEX, QUOTATION_STATUS_HEX, REPORT_PERIODS } from "@/lib/constants";
+import { StatCard } from "@/components/ui/stat-card";
 
 export default function ReportsPage() {
   const { user } = useAuth();
@@ -109,13 +57,13 @@ export default function ReportsPage() {
     name: r.status.charAt(0).toUpperCase() + r.status.slice(1),
     value: Number(r.total),
     count: r.count,
-    fill: INVOICE_STATUS_COLORS[r.status] ?? "#cbd5e1",
+    fill: INVOICE_STATUS_HEX[r.status] ?? "#cbd5e1",
   }));
 
   const quotationPieData = (data?.quotation_status_breakdown ?? []).map((r) => ({
     name: r.status.charAt(0).toUpperCase() + r.status.slice(1),
     value: r.count,
-    fill: QUOTATION_STATUS_COLORS[r.status] ?? "#cbd5e1",
+    fill: QUOTATION_STATUS_HEX[r.status] ?? "#cbd5e1",
   }));
 
   if (isLoading) {
@@ -148,7 +96,7 @@ export default function ReportsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {PERIODS.map((p) => (
+            {REPORT_PERIODS.map((p) => (
               <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
             ))}
           </SelectContent>
@@ -157,28 +105,28 @@ export default function ReportsPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KpiCard
+        <StatCard
           title="Total Revenue"
           value={fmt(data?.total_revenue ?? 0)}
           sub="Paid invoices"
           icon={DollarSign}
           color="text-green-600"
         />
-        <KpiCard
+        <StatCard
           title="Total Invoiced"
           value={fmt(data?.total_invoiced ?? 0)}
           sub="Excl. cancelled"
           icon={Receipt}
           color="text-blue-600"
         />
-        <KpiCard
+        <StatCard
           title="Outstanding"
           value={fmt(data?.total_outstanding ?? 0)}
           sub="Sent + overdue"
           icon={TrendingUp}
           color="text-amber-600"
         />
-        <KpiCard
+        <StatCard
           title="Overdue"
           value={fmt(data?.total_overdue ?? 0)}
           sub="Needs immediate action"
@@ -277,8 +225,8 @@ export default function ReportsPage() {
                         <Badge
                           variant="secondary"
                           style={{
-                            backgroundColor: INVOICE_STATUS_COLORS[row.status] + "20",
-                            color: INVOICE_STATUS_COLORS[row.status],
+                            backgroundColor: INVOICE_STATUS_HEX[row.status] + "20",
+                            color: INVOICE_STATUS_HEX[row.status],
                           }}
                           className="capitalize text-xs font-medium"
                         >
@@ -318,7 +266,7 @@ export default function ReportsPage() {
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span
                           className="capitalize font-medium"
-                          style={{ color: QUOTATION_STATUS_COLORS[row.status] ?? "#64748b" }}
+                          style={{ color: QUOTATION_STATUS_HEX[row.status] ?? "#64748b" }}
                         >
                           {row.status}
                         </span>
@@ -329,7 +277,7 @@ export default function ReportsPage() {
                           className="h-full rounded-full"
                           style={{
                             width: `${pct}%`,
-                            backgroundColor: QUOTATION_STATUS_COLORS[row.status] ?? "#cbd5e1",
+                            backgroundColor: QUOTATION_STATUS_HEX[row.status] ?? "#cbd5e1",
                           }}
                         />
                       </div>
