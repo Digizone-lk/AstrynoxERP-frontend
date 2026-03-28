@@ -13,18 +13,31 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function getCachedUser(): User | null {
+  try {
+    const raw = sessionStorage.getItem("auth_user");
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() =>
+    typeof window !== "undefined" ? getCachedUser() : null
+  );
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
     try {
       const { data } = await authApi.me();
       setUser(data);
+      sessionStorage.setItem("auth_user", JSON.stringify(data));
       const secure = window.location.protocol === "https:" ? "; Secure" : "";
       document.cookie = `user_role=${data.role}; path=/; SameSite=Lax${secure}`;
     } catch {
       setUser(null);
+      sessionStorage.removeItem("auth_user");
       document.cookie = "user_role=; path=/; max-age=0";
     }
   }
@@ -44,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     await authApi.logout();
     setUser(null);
+    sessionStorage.removeItem("auth_user");
     document.cookie = "user_role=; path=/; max-age=0";
     // Keep has_account — user still has an account, just logged out
   }
