@@ -78,7 +78,7 @@ export function Sidebar() {
   async function handleLogout() {
     await logout();
     toast.success("Logged out");
-    router.push("/login");
+    router.replace("/login");
   }
 
   return (
@@ -112,10 +112,23 @@ export function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-slate-700">
-        <div className="px-3 py-2 mb-2">
-          <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
-          <p className="text-xs text-slate-400 capitalize">{user?.role?.replace("_", " ")}</p>
-        </div>
+        <Link
+          href="/profile"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors",
+            pathname.startsWith("/profile")
+              ? "bg-blue-600 text-white"
+              : "hover:bg-slate-800"
+          )}
+        >
+          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+            {(user?.full_name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
+            <p className="text-xs text-slate-400 capitalize">{user?.role?.replace("_", " ")}</p>
+          </div>
+        </Link>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
