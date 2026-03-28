@@ -183,7 +183,7 @@ export default function ReportsPage() {
                     cy="45%"
                     outerRadius={80}
                     dataKey="value"
-                    label={({ name, count }) => `${name} (${count})`}
+                    label={({ name, payload }) => `${name} (${(payload as { count?: number })?.count ?? ""})`}
                     labelLine={false}
                   >
                     {invoicePieData.map((entry, i) => (
