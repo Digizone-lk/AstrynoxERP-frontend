@@ -25,10 +25,21 @@ async function handler(req: NextRequest): Promise<NextResponse> {
 
   const res = await fetch(targetUrl, init);
 
-  // Forward all response headers, including Set-Cookie
+  // Build response headers — handle Set-Cookie separately because
+  // Headers.set() merges multiple Set-Cookie values into one (invalid).
+  // Each cookie must be its own header for the browser to store them correctly.
+  const responseHeaders = new Headers();
+  res.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "set-cookie") {
+      responseHeaders.set(key, value);
+    }
+  });
+  const cookies = res.headers.getSetCookie?.() ?? [];
+  cookies.forEach((cookie) => responseHeaders.append("set-cookie", cookie));
+
   return new NextResponse(res.body, {
     status: res.status,
-    headers: new Headers(res.headers),
+    headers: responseHeaders,
   });
 }
 
