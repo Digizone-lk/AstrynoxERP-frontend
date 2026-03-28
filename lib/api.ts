@@ -32,7 +32,9 @@ api.interceptors.response.use(
         return api(original);
       } catch (err) {
         processQueue(err);
-        if (typeof window !== "undefined") window.location.href = "/login";
+        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+          window.location.href = "/login";
+        }
         return Promise.reject(err);
       } finally {
         isRefreshing = false;
