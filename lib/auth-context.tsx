@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { authApi } from "@/lib/api";
+import { setAccessToken, clearAccessToken } from "@/lib/token";
 import type { User } from "@/lib/types";
 
 interface AuthContextValue {
@@ -30,14 +31,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refresh() {
     try {
+      // On every app load the access_token is gone from memory.
+      // Call /refresh first — the proxy forwards the HttpOnly refresh_token
+      // cookie automatically — then fetch the user profile.
+      const { data: tokenData } = await authApi.refreshToken();
+      setAccessToken(tokenData.access_token);
+
       const { data } = await authApi.me();
       setUser(data);
       sessionStorage.setItem("auth_user", JSON.stringify(data));
       const secure = window.location.protocol === "https:" ? "; Secure" : "";
       document.cookie = `user_role=${data.role}; path=/; SameSite=Lax${secure}`;
     } catch {
+      // refresh_token cookie is missing or expired — user must log in
       setUser(null);
       sessionStorage.removeItem("auth_user");
+      clearAccessToken();
       document.cookie = "user_role=; path=/; max-age=0";
     }
   }
@@ -47,19 +56,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
-    await authApi.login(email, password);
-    // Persist across sessions so middleware can distinguish returning users from new visitors
+    const { data } = await authApi.login(email, password);
+    // Save access_token in memory; refresh_token is in the HttpOnly cookie
+    // set by the backend — never touches JavaScript
+    setAccessToken(data.access_token);
     const secure = window.location.protocol === "https:" ? "; Secure" : "";
     document.cookie = `has_account=1; max-age=2592000; path=/; SameSite=Lax${secure}`;
-    await refresh();
+
+    const { data: me } = await authApi.me();
+    setUser(me);
+    sessionStorage.setItem("auth_user", JSON.stringify(me));
+    document.cookie = `user_role=${me.role}; path=/; SameSite=Lax${secure}`;
   }
 
   async function logout() {
-    await authApi.logout();
-    setUser(null);
-    sessionStorage.removeItem("auth_user");
-    document.cookie = "user_role=; path=/; max-age=0";
-    // Keep has_account — user still has an account, just logged out
+    try {
+      await authApi.logout();
+    } finally {
+      setUser(null);
+      sessionStorage.removeItem("auth_user");
+      clearAccessToken();
+      document.cookie = "user_role=; path=/; max-age=0";
+    }
   }
 
   return (

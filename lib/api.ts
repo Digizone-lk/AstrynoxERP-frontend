@@ -1,9 +1,17 @@
 import axios from "axios";
+import { getAccessToken, setAccessToken, clearAccessToken } from "@/lib/token";
 
 const api = axios.create({
   baseURL: "",
-  withCredentials: true, // send httpOnly cookies
+  withCredentials: true, // send HttpOnly refresh_token cookie on /api/auth/refresh
   headers: { "Content-Type": "application/json" },
+});
+
+// Inject Authorization: Bearer from memory on every request
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 
 let isRefreshing = false;
@@ -27,11 +35,15 @@ api.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
       try {
-        await api.post("/api/auth/refresh");
+        // No Authorization header needed — proxy forwards the HttpOnly
+        // refresh_token cookie to the backend automatically
+        const { data } = await api.post("/api/auth/refresh");
+        setAccessToken(data.access_token);
         processQueue(null);
         return api(original);
       } catch (err) {
         processQueue(err);
+        clearAccessToken();
         if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register") {
           window.location.replace("/login?next=" + encodeURIComponent(window.location.pathname));
         }
@@ -59,6 +71,7 @@ export const authApi = {
     email: string;
     password: string;
   }) => api.post("/api/auth/register", data),
+  refreshToken: () => api.post("/api/auth/refresh"),
   logout: () => api.post("/api/auth/logout"),
   me: () => api.get("/api/auth/me"),
 };
