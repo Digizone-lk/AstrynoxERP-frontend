@@ -11,6 +11,12 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   const headers = new Headers(req.headers);
   headers.delete("host"); // let fetch set the correct host for the target
 
+  // Explicitly ensure the Cookie header is forwarded (defensive copy)
+  const incomingCookie = req.headers.get("cookie");
+  if (incomingCookie) {
+    headers.set("cookie", incomingCookie);
+  }
+
   const init: RequestInit = {
     method: req.method,
     headers,
@@ -23,7 +29,16 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     init.body = req.body;
   }
 
-  const res = await fetch(targetUrl, init);
+  let res: Response;
+  try {
+    res = await fetch(targetUrl, init);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Upstream fetch failed";
+    return new NextResponse(JSON.stringify({ error: message, target: targetUrl }), {
+      status: 502,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   // Build response headers — handle Set-Cookie separately because
   // Headers.set() merges multiple Set-Cookie values into one (invalid).
