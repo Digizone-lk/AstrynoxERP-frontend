@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const AUTH_COOKIE = "access_token";
+// HttpOnly cookies are unreadable by browser JS but ARE readable by
+// Next.js Edge middleware (server-side). Use the refresh_token cookie
+// directly — no need for a separate has_session workaround.
+const AUTH_COOKIE = "refresh_token";
 // Set by client after successful login/register — lets middleware distinguish
 // returning users (send to /login) from brand-new visitors (send to /register)
 const HAS_ACCOUNT_COOKIE = "has_account";

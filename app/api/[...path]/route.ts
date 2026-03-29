@@ -5,56 +5,27 @@ const BACKEND = process.env.NEXT_PUBLIC_API_URL!.replace(/^http:\/\//, "https://
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   const { pathname, search } = new URL(req.url);
-  // FastAPI redirects paths without a trailing slash via 307, which causes
-  // fetch() to drop the Cookie header and POST body on the redirected request.
-  // Normalise to always include a trailing slash so the redirect never fires.
+  // FastAPI redirects paths without a trailing slash via 307.
+  // Normalise upfront so the redirect never fires.
   const normalizedPath = pathname.endsWith("/") ? pathname : `${pathname}/`;
   const targetUrl = `${BACKEND}${normalizedPath}${search}`;
 
-  // Forward all request headers, including Cookie
   const headers = new Headers(req.headers);
-  headers.delete("host"); // let fetch set the correct host for the target
+  headers.delete("host");
 
-  // Explicitly ensure the Cookie header is forwarded (defensive copy)
-  const incomingCookie = req.headers.get("cookie");
-  if (incomingCookie) {
-    headers.set("cookie", incomingCookie);
-  }
-
-  // Buffer body for non-GET requests so it can be replayed if the backend
-  // issues a trailing-slash redirect (307 preserves method + body).
-  let bodyBuffer: ArrayBuffer | undefined;
+  let body: ArrayBuffer | undefined;
   if (!["GET", "HEAD", "DELETE"].includes(req.method) && req.body) {
-    bodyBuffer = await req.arrayBuffer();
+    body = await req.arrayBuffer();
   }
-
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    redirect: "manual", // follow redirects manually so Cookie header is preserved
-    body: bodyBuffer,
-  };
 
   let res: Response;
   try {
-    res = await fetch(targetUrl, init);
-
-    // Safety net: if the backend still redirects despite the normalised URL,
-    // follow manually so the Cookie header and body are preserved.
-    // 307/308 keep the original method+body; 301/302/303 switch to GET.
-    let hops = 0;
-    while (res.status >= 300 && res.status < 400 && hops < 5) {
-      const location = res.headers.get("location");
-      if (!location) break;
-      const next = location.startsWith("http") ? location : `${BACKEND}${location}`;
-      const preserveMethod = res.status === 307 || res.status === 308;
-      res = await fetch(next, {
-        ...init,
-        method: preserveMethod ? req.method : "GET",
-        body: preserveMethod ? bodyBuffer : undefined,
-      });
-      hops++;
-    }
+    res = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body,
+      redirect: "follow",
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upstream fetch failed";
     return new NextResponse(JSON.stringify({ error: message, target: targetUrl }), {
@@ -63,24 +34,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // Build response headers — handle Set-Cookie separately because
-  // Headers.set() merges multiple Set-Cookie values into one (invalid).
-  // Each cookie must be its own header for the browser to store them correctly.
-  //
-  // Strip the Domain attribute so the browser stores cookies scoped to the
-  // Vercel domain rather than the Railway backend domain (which browsers reject).
-  const responseHeaders = new Headers();
-  res.headers.forEach((value, key) => {
-    if (key.toLowerCase() !== "set-cookie") {
-      responseHeaders.set(key, value);
-    }
-  });
-  const cookies = res.headers.getSetCookie?.() ?? [];
-  cookies.forEach((cookie) => {
-    const stripped = cookie.replace(/;\s*domain=[^;]+/gi, "");
-    responseHeaders.append("set-cookie", stripped);
-  });
-
+  const responseHeaders = new Headers(res.headers);
   return new NextResponse(res.body, {
     status: res.status,
     headers: responseHeaders,
