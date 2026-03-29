@@ -77,8 +77,8 @@ export const authApi = {
 };
 
 export const clientsApi = {
-  list: () => api.get("/api/clients/"),
-  create: (data: object) => api.post("/api/clients/", data),
+  list: () => api.get("/api/clients"),
+  create: (data: object) => api.post("/api/clients", data),
   get: (id: string) => api.get(`/api/clients/${id}`),
   update: (id: string, data: object) => api.patch(`/api/clients/${id}`, data),
   getEligibleProducts: (clientId: string) =>
@@ -92,8 +92,8 @@ export const clientsApi = {
 };
 
 export const productsApi = {
-  list: (params?: { is_global?: boolean }) => api.get("/api/products/", { params }),
-  create: (data: object) => api.post("/api/products/", data),
+  list: (params?: { is_global?: boolean }) => api.get("/api/products", { params }),
+  create: (data: object) => api.post("/api/products", data),
   get: (id: string) => api.get(`/api/products/${id}`),
   update: (id: string, data: object) => api.patch(`/api/products/${id}`, data),
   delete: (id: string) => api.delete(`/api/products/${id}`),
@@ -101,8 +101,8 @@ export const productsApi = {
 };
 
 export const quotationsApi = {
-  list: (params?: object) => api.get("/api/quotations/", { params }),
-  create: (data: object) => api.post("/api/quotations/", data),
+  list: (params?: object) => api.get("/api/quotations", { params }),
+  create: (data: object) => api.post("/api/quotations", data),
   get: (id: string) => api.get(`/api/quotations/${id}`),
   update: (id: string, data: object) => api.patch(`/api/quotations/${id}`, data),
   send: (id: string) => api.post(`/api/quotations/${id}/send`),
@@ -115,8 +115,8 @@ export const quotationsApi = {
 };
 
 export const invoicesApi = {
-  list: (params?: object) => api.get("/api/invoices/", { params }),
-  create: (data: object) => api.post("/api/invoices/", data),
+  list: (params?: object) => api.get("/api/invoices", { params }),
+  create: (data: object) => api.post("/api/invoices", data),
   get: (id: string) => api.get(`/api/invoices/${id}`),
   update: (id: string, data: object) => api.patch(`/api/invoices/${id}`, data),
   send: (id: string) => api.post(`/api/invoices/${id}/send`),
@@ -136,8 +136,8 @@ export const reportsApi = {
 };
 
 export const usersApi = {
-  list: () => api.get("/api/users/"),
-  create: (data: object) => api.post("/api/users/", data),
+  list: () => api.get("/api/users"),
+  create: (data: object) => api.post("/api/users", data),
   update: (id: string, data: object) => api.patch(`/api/users/${id}`, data),
   resetPassword: (id: string, new_password: string) =>
     api.post(`/api/users/${id}/reset-password`, { new_password }),
@@ -169,7 +169,7 @@ export const profileApi = {
 };
 
 export const auditApi = {
-  list: (params?: object) => api.get("/api/audit/", { params }),
+  list: (params?: object) => api.get("/api/audit", { params }),
 };
 
 // Separate axios instance — no baseURL or credentials — for external CDN calls
