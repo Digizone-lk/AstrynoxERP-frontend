@@ -5,10 +5,7 @@ const BACKEND = process.env.NEXT_PUBLIC_API_URL!.replace(/^http:\/\//, "https://
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   const { pathname, search } = new URL(req.url);
-  // FastAPI redirects paths without a trailing slash via 307.
-  // Normalise upfront so the redirect never fires.
-  const normalizedPath = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  const targetUrl = `${BACKEND}${normalizedPath}${search}`;
+  const targetUrl = `${BACKEND}${pathname}${search}`;
 
   const headers = new Headers(req.headers);
   headers.delete("host");
