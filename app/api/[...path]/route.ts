@@ -20,7 +20,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   const init: RequestInit = {
     method: req.method,
     headers,
-    redirect: "follow", // follow redirects server-side; never expose Railway URL to browser
+    redirect: "manual", // follow redirects manually so Cookie header is preserved
   };
 
   if (!["GET", "HEAD", "DELETE"].includes(req.method)) {
@@ -32,6 +32,18 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   let res: Response;
   try {
     res = await fetch(targetUrl, init);
+
+    // Manually follow redirects (up to 5) so the Cookie header is not dropped.
+    // fetch(redirect:"follow") strips Cookie on redirect — a known security behaviour
+    // that breaks cookie-based auth when the backend issues a trailing-slash redirect.
+    let hops = 0;
+    while (res.status >= 300 && res.status < 400 && hops < 5) {
+      const location = res.headers.get("location");
+      if (!location) break;
+      const next = location.startsWith("http") ? location : `${BACKEND}${location}`;
+      res = await fetch(next, { ...init, body: undefined, method: "GET" });
+      hops++;
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upstream fetch failed";
     return new NextResponse(JSON.stringify({ error: message, target: targetUrl }), {
