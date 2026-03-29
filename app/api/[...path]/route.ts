@@ -21,8 +21,27 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       method: req.method,
       headers,
       body,
-      redirect: "follow",
+      redirect: "manual",
     });
+
+    // Follow redirects manually so the Authorization header is never dropped.
+    // fetch(redirect:"follow") strips Authorization on redirects (security rule).
+    // Body is an ArrayBuffer so it can be safely re-sent on each hop.
+    // 307/308 preserve method + body; 301/302/303 switch to GET.
+    let hops = 0;
+    while (res.status >= 300 && res.status < 400 && hops < 5) {
+      const location = res.headers.get("location");
+      if (!location) break;
+      const next = location.startsWith("http") ? location : `${BACKEND}${location}`;
+      const preserveMethod = res.status === 307 || res.status === 308;
+      res = await fetch(next, {
+        method: preserveMethod ? req.method : "GET",
+        headers,
+        body: preserveMethod ? body : undefined,
+        redirect: "manual",
+      });
+      hops++;
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upstream fetch failed";
     return new NextResponse(JSON.stringify({ error: message, target: targetUrl }), {
