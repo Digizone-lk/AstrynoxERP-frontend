@@ -5,7 +5,11 @@ const BACKEND = process.env.NEXT_PUBLIC_API_URL!.replace(/^http:\/\//, "https://
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   const { pathname, search } = new URL(req.url);
-  const targetUrl = `${BACKEND}${pathname}${search}`;
+  // FastAPI redirects paths without a trailing slash via 307, which causes
+  // fetch() to drop the Cookie header and POST body on the redirected request.
+  // Normalise to always include a trailing slash so the redirect never fires.
+  const normalizedPath = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  const targetUrl = `${BACKEND}${normalizedPath}${search}`;
 
   // Forward all request headers, including Cookie
   const headers = new Headers(req.headers);
@@ -35,10 +39,9 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   try {
     res = await fetch(targetUrl, init);
 
-    // Manually follow redirects (up to 5) so the Cookie header is not dropped.
-    // fetch(redirect:"follow") strips Cookie on redirect — a known security behaviour
-    // that breaks cookie-based auth when the backend issues a trailing-slash redirect.
-    // 307/308 preserve the original method + body; 301/302/303 switch to GET.
+    // Safety net: if the backend still redirects despite the normalised URL,
+    // follow manually so the Cookie header and body are preserved.
+    // 307/308 keep the original method+body; 301/302/303 switch to GET.
     let hops = 0;
     while (res.status >= 300 && res.status < 400 && hops < 5) {
       const location = res.headers.get("location");
