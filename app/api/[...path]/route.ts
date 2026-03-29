@@ -17,17 +17,19 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     headers.set("cookie", incomingCookie);
   }
 
+  // Buffer body for non-GET requests so it can be replayed if the backend
+  // issues a trailing-slash redirect (307 preserves method + body).
+  let bodyBuffer: ArrayBuffer | undefined;
+  if (!["GET", "HEAD", "DELETE"].includes(req.method) && req.body) {
+    bodyBuffer = await req.arrayBuffer();
+  }
+
   const init: RequestInit = {
     method: req.method,
     headers,
     redirect: "manual", // follow redirects manually so Cookie header is preserved
+    body: bodyBuffer,
   };
-
-  if (!["GET", "HEAD", "DELETE"].includes(req.method)) {
-    // @ts-expect-error — duplex is required for streaming request bodies
-    init.duplex = "half";
-    init.body = req.body;
-  }
 
   let res: Response;
   try {
@@ -36,12 +38,18 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     // Manually follow redirects (up to 5) so the Cookie header is not dropped.
     // fetch(redirect:"follow") strips Cookie on redirect — a known security behaviour
     // that breaks cookie-based auth when the backend issues a trailing-slash redirect.
+    // 307/308 preserve the original method + body; 301/302/303 switch to GET.
     let hops = 0;
     while (res.status >= 300 && res.status < 400 && hops < 5) {
       const location = res.headers.get("location");
       if (!location) break;
       const next = location.startsWith("http") ? location : `${BACKEND}${location}`;
-      res = await fetch(next, { ...init, body: undefined, method: "GET" });
+      const preserveMethod = res.status === 307 || res.status === 308;
+      res = await fetch(next, {
+        ...init,
+        method: preserveMethod ? req.method : "GET",
+        body: preserveMethod ? bodyBuffer : undefined,
+      });
       hops++;
     }
   } catch (err) {
