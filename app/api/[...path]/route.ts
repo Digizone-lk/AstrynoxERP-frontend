@@ -28,6 +28,9 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   // Build response headers — handle Set-Cookie separately because
   // Headers.set() merges multiple Set-Cookie values into one (invalid).
   // Each cookie must be its own header for the browser to store them correctly.
+  //
+  // Strip the Domain attribute so the browser stores cookies scoped to the
+  // Vercel domain rather than the Railway backend domain (which browsers reject).
   const responseHeaders = new Headers();
   res.headers.forEach((value, key) => {
     if (key.toLowerCase() !== "set-cookie") {
@@ -35,7 +38,10 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     }
   });
   const cookies = res.headers.getSetCookie?.() ?? [];
-  cookies.forEach((cookie) => responseHeaders.append("set-cookie", cookie));
+  cookies.forEach((cookie) => {
+    const stripped = cookie.replace(/;\s*domain=[^;]+/gi, "");
+    responseHeaders.append("set-cookie", stripped);
+  });
 
   return new NextResponse(res.body, {
     status: res.status,
