@@ -102,6 +102,7 @@ export const productsApi = {
 
 export const quotationsApi = {
   list: (params?: object) => api.get("/api/quotations", { params }),
+  nextNumber: () => api.get<{ quote_number: string }>("/api/quotations/next-number"),
   create: (data: object) => api.post("/api/quotations", data),
   get: (id: string) => api.get(`/api/quotations/${id}`),
   update: (id: string, data: object) => api.patch(`/api/quotations/${id}`, data),
@@ -116,6 +117,7 @@ export const quotationsApi = {
 
 export const invoicesApi = {
   list: (params?: object) => api.get("/api/invoices", { params }),
+  nextNumber: () => api.get<{ invoice_number: string }>("/api/invoices/next-number"),
   create: (data: object) => api.post("/api/invoices", data),
   get: (id: string) => api.get(`/api/invoices/${id}`),
   update: (id: string, data: object) => api.patch(`/api/invoices/${id}`, data),

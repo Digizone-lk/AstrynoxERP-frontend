@@ -41,6 +41,11 @@ export default function NewQuotationPage() {
     queryFn: () => productsApi.list().then((r) => r.data),
   });
 
+  const { data: nextNumberData } = useQuery({
+    queryKey: ["quotations", "next-number"],
+    queryFn: () => quotationsApi.nextNumber().then((r) => r.data),
+  });
+
   const createMut = useMutation({
     mutationFn: () =>
       quotationsApi.create({
@@ -92,6 +97,12 @@ export default function NewQuotationPage() {
             <div>
               <Label>Valid Until</Label>
               <Input type="date" className="mt-1" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} />
+            </div>
+            <div>
+              <Label>Quotation Number</Label>
+              <p className="mt-1 h-9 flex items-center px-3 rounded-md border bg-slate-50 text-sm text-slate-500 font-mono">
+                {nextNumberData?.quote_number ?? "—"}
+              </p>
             </div>
             <div>
               <Label>Currency</Label>

@@ -37,6 +37,11 @@ export default function NewInvoicePage() {
     queryFn: () => productsApi.list().then((r) => r.data),
   });
 
+  const { data: nextNumberData } = useQuery({
+    queryKey: ["invoices", "next-number"],
+    queryFn: () => invoicesApi.nextNumber().then((r) => r.data),
+  });
+
   const createMut = useMutation({
     mutationFn: () =>
       invoicesApi.create({
@@ -88,6 +93,12 @@ export default function NewInvoicePage() {
             <div>
               <Label>Due Date</Label>
               <Input type="date" className="mt-1" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>Invoice Number</Label>
+              <p className="mt-1 h-9 flex items-center px-3 rounded-md border bg-slate-50 text-sm text-slate-500 font-mono">
+                {nextNumberData?.invoice_number ?? "—"}
+              </p>
             </div>
             <div>
               <Label>Currency</Label>
