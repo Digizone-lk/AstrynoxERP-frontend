@@ -175,7 +175,9 @@ function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user
     avatarUploadMut.mutate(file);
   }
 
-  const avatarSrc = avatarPreview ?? (profile?.avatar_url ? `${process.env.NEXT_PUBLIC_API_URL}${profile.avatar_url}` : null);
+  const avatarSrc = avatarPreview ?? (profile?.avatar_url
+    ? (profile.avatar_url.startsWith("http") ? profile.avatar_url : `${process.env.NEXT_PUBLIC_API_URL}${profile.avatar_url}`)
+    : null);
   const initials = (profile?.full_name ?? user?.full_name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   if (isLoading) return <div className="text-slate-400 text-sm">Loading…</div>;
