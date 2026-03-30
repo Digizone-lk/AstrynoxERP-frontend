@@ -26,18 +26,17 @@ async function handler(req: NextRequest): Promise<NextResponse> {
 
     // Follow redirects manually so the Authorization header is never dropped.
     // fetch(redirect:"follow") strips Authorization on redirects (security rule).
-    // Body is an ArrayBuffer so it can be safely re-sent on each hop.
-    // 307/308 preserve method + body; 301/302/303 switch to GET.
+    // Always preserve the original method — for an API proxy, FastAPI trailing-slash
+    // redirects (301/307) must never convert POST/PATCH/DELETE into GET.
     let hops = 0;
     while (res.status >= 300 && res.status < 400 && hops < 5) {
       const location = res.headers.get("location");
       if (!location) break;
       const next = location.startsWith("http") ? location : `${BACKEND}${location}`;
-      const preserveMethod = res.status === 307 || res.status === 308;
       res = await fetch(next, {
-        method: preserveMethod ? req.method : "GET",
+        method: req.method,
         headers,
-        body: preserveMethod ? body : undefined,
+        body,
         redirect: "manual",
       });
       hops++;
