@@ -44,14 +44,12 @@ export default function QuotationsPage() {
             <Link key={q.id} href={`/quotations/${q.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="font-semibold text-slate-800">{q.quote_number}</p>
-                        <p className="text-sm text-slate-500">{formatDate(q.issue_date)}</p>
-                      </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-800">{q.quote_number}</p>
+                      <p className="text-sm text-slate-500">{formatDate(q.issue_date)}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <p className="font-semibold text-slate-700">{formatCurrency(q.total, q.currency)}</p>
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${QUOTATION_STATUS_COLORS[q.status]}`}>
                         {q.status}

@@ -51,17 +51,17 @@ export default function AuditLogPage() {
           {logs.map((log) => (
             <Card key={log.id}>
               <CardContent className="py-3 px-4">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded shrink-0 ${ACTION_COLORS[log.action] ?? "bg-slate-100 text-slate-700"}`}>
                       {log.action}
                     </span>
-                    <span className="text-sm text-slate-600 capitalize">{log.resource_type}</span>
+                    <span className="text-sm text-slate-600 capitalize truncate">{log.resource_type}</span>
                     {log.resource_id && (
-                      <span className="text-xs text-slate-400 truncate font-mono">{log.resource_id}</span>
+                      <span className="text-xs text-slate-400 truncate font-mono hidden sm:inline">{log.resource_id}</span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400 shrink-0">
+                  <span className="text-xs text-slate-400 shrink-0 sm:text-right">
                     {new Date(log.created_at).toLocaleString()}
                   </span>
                 </div>

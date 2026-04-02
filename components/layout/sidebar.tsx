@@ -13,6 +13,7 @@ import {
   ClipboardList,
   BarChart2,
   LogOut,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authApi } from "@/lib/api";
@@ -70,7 +71,12 @@ const navItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -82,10 +88,25 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col fixed left-0 top-0 z-40">
-      <div className="px-6 py-5 border-b border-slate-700">
-        <h1 className="text-xl font-bold text-blue-400">BillFlow</h1>
-        <p className="text-xs text-slate-400 mt-1 truncate">{user?.email}</p>
+    <aside
+      className={cn(
+        "w-64 h-screen bg-slate-900 text-white flex flex-col fixed left-0 top-0 z-40 transition-transform duration-200 ease-in-out",
+        "md:translate-x-0",
+        open ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
+      <div className="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-blue-400">BillFlow</h1>
+          <p className="text-xs text-slate-400 mt-1 truncate">{user?.email}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 rounded text-slate-400 hover:text-white shrink-0 ml-2"
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3">
@@ -97,6 +118,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm font-medium transition-colors",
                   active
@@ -114,6 +136,7 @@ export function Sidebar() {
       <div className="p-3 border-t border-slate-700">
         <Link
           href="/profile"
+          onClick={onClose}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors",
             pathname.startsWith("/profile")
