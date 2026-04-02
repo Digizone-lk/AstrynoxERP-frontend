@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, KeyRound, UserX, Activity } from "lucide-react";
+import { Plus, Pencil, KeyRound, UserX, UserCheck, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -77,6 +77,7 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+  const [reactivateTarget, setReactivateTarget] = useState<User | null>(null);
 
   // ── Create/edit form ──
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<CreateFormData>({
@@ -114,6 +115,12 @@ export default function UsersPage() {
     onError: (e) => toast.error(getApiError(e, "Failed to deactivate user")),
   });
 
+  const reactivateMut = useMutation({
+    mutationFn: (id: string) => usersApi.reactivate(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success("User reactivated"); setReactivateTarget(null); },
+    onError: (e) => toast.error(getApiError(e, "Failed to reactivate user")),
+  });
+
   function onSubmit(data: CreateFormData) {
     editing ? updateMut.mutate({ full_name: data.full_name, role: data.role }) : createMut.mutate(data);
   }
@@ -134,20 +141,20 @@ export default function UsersPage() {
           {users.map((u) => (
             <Card key={u.id} className={!u.is_active ? "opacity-60" : ""}>
               <CardContent className="pt-4 pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm">
+                <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm shrink-0">
                       {u.full_name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-800 flex items-center gap-2">
-                        {u.full_name}
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800 flex items-center gap-2 flex-wrap">
+                        <span className="truncate">{u.full_name}</span>
                         {!u.is_active && <span className="text-xs text-slate-400 font-normal">(inactive)</span>}
                       </p>
-                      <p className="text-sm text-slate-500">{u.email}</p>
+                      <p className="text-sm text-slate-500 truncate">{u.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${ROLE_COLORS[u.role]}`}>
                       {ROLE_LABELS[u.role]}
                     </span>
@@ -159,9 +166,13 @@ export default function UsersPage() {
                         <button onClick={() => setResetTarget(u)} className="text-slate-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Reset password for ${u.full_name}`}>
                           <KeyRound size={14} />
                         </button>
-                        {u.is_active && (
+                        {u.is_active ? (
                           <button onClick={() => setDeactivateTarget(u)} className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Deactivate ${u.full_name}`}>
                             <UserX size={14} />
+                          </button>
+                        ) : (
+                          <button onClick={() => setReactivateTarget(u)} className="text-slate-400 hover:text-green-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Reactivate ${u.full_name}`}>
+                            <UserCheck size={14} />
                           </button>
                         )}
                         <button onClick={() => router.push(`/settings/users/${u.id}/activity`)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`View activity for ${u.full_name}`}>
@@ -251,6 +262,26 @@ export default function UsersPage() {
               disabled={deactivateMut.isPending}
             >
               Deactivate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate confirm dialog */}
+      <Dialog open={!!reactivateTarget} onOpenChange={() => setReactivateTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Reactivate User</DialogTitle></DialogHeader>
+          <p className="text-sm text-slate-600 py-2">
+            Reactivate <strong>{reactivateTarget?.full_name}</strong>? They will be able to log in again.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateTarget(null)}>Cancel</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => reactivateTarget && reactivateMut.mutate(reactivateTarget.id)}
+              disabled={reactivateMut.isPending}
+            >
+              Reactivate
             </Button>
           </DialogFooter>
         </DialogContent>

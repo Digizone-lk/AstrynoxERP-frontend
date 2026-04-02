@@ -86,13 +86,13 @@ export default function ReportsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Reports</h1>
           <p className="text-sm text-slate-500 mt-0.5">Financial overview for your organisation</p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -136,8 +136,8 @@ export default function ReportsPage() {
       </div>
 
       {/* Revenue chart + Invoice pie */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <Card className="md:col-span-2 lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Revenue Over Time</CardTitle>
           </CardHeader>
@@ -199,7 +199,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Invoice status table + Quotation breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -210,7 +210,8 @@ export default function ReportsPage() {
             {data?.invoice_status_breakdown.length === 0 ? (
               <p className="text-sm text-slate-400">No data</p>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[280px]">
                 <thead>
                   <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
                     <th className="pb-2">Status</th>
@@ -241,6 +242,7 @@ export default function ReportsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -302,7 +304,7 @@ export default function ReportsPage() {
             <p className="text-sm text-slate-400">No client data in this period</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[480px]">
                 <thead>
                   <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
                     <th className="pb-2">Client</th>

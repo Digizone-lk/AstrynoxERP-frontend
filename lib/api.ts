@@ -144,6 +144,7 @@ export const usersApi = {
   resetPassword: (id: string, new_password: string) =>
     api.post(`/api/users/${id}/reset-password`, { new_password }),
   deactivate: (id: string) => api.post(`/api/users/${id}/deactivate`),
+  reactivate: (id: string) => api.post(`/api/users/${id}/reactivate`),
   getActivity: (id: string, params?: { skip?: number; limit?: number }) =>
     api.get(`/api/users/${id}/activity`, { params }),
 };

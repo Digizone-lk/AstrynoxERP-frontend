@@ -1,5 +1,5 @@
 "use client";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CURRENCIES } from "@/lib/constants";
 import { toast } from "sonner";
 
 const schema = z.object({
@@ -26,7 +28,7 @@ type FormData = z.infer<typeof schema>;
 export default function RegisterPage() {
   const router = useRouter();
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { currency: "USD" },
   });
@@ -79,17 +81,25 @@ export default function RegisterPage() {
               : <p className="text-xs text-slate-500 mt-1">Used in your unique URL</p>
             }
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Currency</Label>
-              <Input
-                placeholder="USD"
-                maxLength={5}
-                className="mt-1"
-                {...register("currency")}
-              />
-              {errors.currency && <p className="text-xs text-red-500 mt-1">{errors.currency.message}</p>}
-            </div>
+          <div>
+            <Label>Currency</Label>
+            <Controller
+              name="currency"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.currency && <p className="text-xs text-red-500 mt-1">{errors.currency.message}</p>}
           </div>
           <div>
             <Label>Your Name</Label>

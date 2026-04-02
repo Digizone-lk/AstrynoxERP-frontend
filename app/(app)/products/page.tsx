@@ -104,7 +104,7 @@ export default function ProductsPage() {
           <p>No products yet. {canWrite && "Create your first product."}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map((p) => (
             <Card key={p.id} className="hover:shadow-md transition-shadow">
               <CardContent className="pt-5">

@@ -71,12 +71,12 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
         <div className="flex items-center gap-2">
           {isConverting && <RefreshCw size={14} className="text-slate-400 animate-spin" />}
           <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-44 sm:w-52">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

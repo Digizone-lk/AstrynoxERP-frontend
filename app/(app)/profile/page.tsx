@@ -104,7 +104,7 @@ export default function ProfilePage() {
       <h1 className="text-2xl font-bold text-slate-800 mb-6">My Profile</h1>
 
       {/* Tab nav */}
-      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex flex-wrap gap-1 mb-6 bg-slate-100 p-1 rounded-xl w-fit max-w-full">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -187,8 +187,8 @@ function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user
       {/* Avatar */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-5">
-            <div className="relative">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+            <div className="relative shrink-0 self-start">
               {avatarSrc ? (
                 <img src={avatarSrc} alt="Avatar" className="w-20 h-20 rounded-full object-cover ring-2 ring-slate-200" />
               ) : (
@@ -202,12 +202,12 @@ function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user
                 </div>
               )}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-800">{profile?.full_name}</p>
-              <p className="text-sm text-slate-500">{profile?.email}</p>
+              <p className="text-sm text-slate-500 truncate">{profile?.email}</p>
               <Badge className="mt-1 text-xs capitalize">{ROLE_LABELS[profile?.role ?? "viewer"]}</Badge>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleFileChange} />
               <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={avatarUploadMut.isPending} aria-label="Upload avatar">
                 <Camera size={14} className="mr-1.5" /> Change
@@ -227,7 +227,7 @@ function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user
         <CardHeader><CardTitle className="text-base">Personal Information</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit((d) => updateMut.mutate(d))} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label>Full Name</Label>
                 <Input className="mt-1" {...register("full_name")} />

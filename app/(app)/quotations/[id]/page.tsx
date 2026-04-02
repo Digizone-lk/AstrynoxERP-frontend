@@ -73,7 +73,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
         <Link href="/quotations"><Button variant="ghost" size="sm"><ArrowLeft size={16} className="mr-1" />Back</Button></Link>
         <h1 className="text-2xl font-bold text-slate-800">{quotation.quote_number}</h1>
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${QUOTATION_STATUS_COLORS[quotation.status]}`}>
@@ -104,7 +104,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="max-w-4xl space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader><CardTitle className="text-sm text-slate-500 font-medium uppercase tracking-wide">Client</CardTitle></CardHeader>
             <CardContent>
