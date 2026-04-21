@@ -33,7 +33,7 @@ function LoginForm() {
     try {
       await login(data.email, data.password);
       const next = searchParams.get("next");
-      router.replace(next && next.startsWith("/") ? next : "/dashboard");
+      router.replace(next && next.startsWith("/") ? next : "/modules");
     } catch (err) {
       toast.error(getApiError(err, "Invalid email or password"));
     }

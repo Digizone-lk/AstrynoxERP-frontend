@@ -44,7 +44,7 @@ export default function RegisterPage() {
       const secure = window.location.protocol === "https:" ? "; Secure" : "";
       document.cookie = `has_account=1; max-age=2592000; path=/; SameSite=Lax${secure}`;
       toast.success("Organization created! Welcome to BillFlow.");
-      router.replace("/dashboard");
+      router.replace("/modules");
     } catch (err) {
       toast.error(getApiError(err, "Registration failed"));
     }
