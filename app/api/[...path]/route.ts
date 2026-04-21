@@ -9,6 +9,10 @@ async function handler(req: NextRequest): Promise<NextResponse> {
 
   const headers = new Headers(req.headers);
   headers.delete("host");
+  // Tell the upstream not to compress — the proxy forwards raw bytes, so a
+  // compressed body + Content-Encoding header causes ERR_CONTENT_DECODING_FAILED
+  // in the browser because Vercel's runtime re-processes the already-encoded body.
+  headers.set("accept-encoding", "identity");
 
   let body: ArrayBuffer | undefined;
   if (!["GET", "HEAD", "DELETE"].includes(req.method) && req.body) {
