@@ -2,6 +2,17 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

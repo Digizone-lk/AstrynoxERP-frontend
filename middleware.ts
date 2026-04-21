@@ -14,8 +14,8 @@ const AUTH_ROUTES = ["/login", "/register"];
 // without decoding the JWT (middleware runs on the Edge runtime, no jsonwebtoken)
 const ROLE_COOKIE = "user_role";
 
-const FINANCE_ROUTES = ["/reports", "/audit-log"];
-const ADMIN_ROUTES = ["/settings/users"];
+const FINANCE_ROUTES = ["/ims/reports", "/ims/audit-log"];
+const ADMIN_ROUTES = ["/ims/settings/users"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -25,15 +25,15 @@ export function middleware(request: NextRequest) {
 
   // Root — three-way redirect based on auth state
   if (pathname === "/") {
-    if (isAuthenticated) return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (isAuthenticated) return NextResponse.redirect(new URL("/modules", request.url));
     if (hasAccount) return NextResponse.redirect(new URL("/login", request.url));
     return NextResponse.redirect(new URL("/register", request.url));
   }
 
-  // Auth routes — authenticated users go to dashboard, others pass through
+  // Auth routes — authenticated users go to modules, others pass through
   if (AUTH_ROUTES.includes(pathname)) {
     if (isAuthenticated) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/modules", request.url));
     }
     return NextResponse.next();
   }
@@ -51,11 +51,11 @@ export function middleware(request: NextRequest) {
     const isAdmin = role === "super_admin";
 
     if (FINANCE_ROUTES.some((r) => pathname.startsWith(r)) && !isFinance) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/ims/dashboard", request.url));
     }
 
     if (ADMIN_ROUTES.some((r) => pathname.startsWith(r)) && !isAdmin) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/ims/dashboard", request.url));
     }
   }
 
@@ -67,15 +67,11 @@ export const config = {
     "/",
     "/login",
     "/register",
-    "/dashboard/:path*",
-    "/profile/:path*",
-    "/profile",
-    "/clients/:path*",
-    "/products/:path*",
-    "/quotations/:path*",
-    "/invoices/:path*",
-    "/reports/:path*",
-    "/settings/:path*",
-    "/audit-log/:path*",
+    "/modules",
+    "/modules/:path*",
+    "/hris",
+    "/hris/:path*",
+    "/ims",
+    "/ims/:path*",
   ],
 };
