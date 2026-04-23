@@ -14,12 +14,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, KeyRound, UserX, UserCheck, Activity } from "lucide-react";
+import { Plus, Pencil, KeyRound, UserX, UserCheck, Activity, ShieldCheck } from "lucide-react";
 import { UsersListSkeleton } from "@/components/ims/skeletons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const ROLES: UserRole[] = ["super_admin", "accountant", "sales", "viewer"];
+
+const ALL_MODULES = ["dashboard", "clients", "products", "quotations", "invoices", "reports"] as const;
+type ModuleKey = typeof ALL_MODULES[number];
+const MODULE_LABELS: Record<ModuleKey, string> = {
+  dashboard: "Dashboard",
+  clients: "Clients",
+  products: "Products",
+  quotations: "Quotations",
+  invoices: "Invoices",
+  reports: "Reports & Audit",
+};
 
 const ROLE_COLORS: Record<UserRole, string> = {
   super_admin: "bg-purple-100 text-purple-700",
@@ -79,6 +90,7 @@ export default function UsersPage() {
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
   const [reactivateTarget, setReactivateTarget] = useState<User | null>(null);
+  const [modulesTarget, setModulesTarget] = useState<User | null>(null);
 
   // ── Create/edit form ──
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<CreateFormData>({
@@ -132,7 +144,7 @@ export default function UsersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Users</h1>
-        <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Invite User</Button>
+        <Button onClick={openCreate} size="sm"><Plus size={16} className="mr-1" /> Create User</Button>
       </div>
 
       {isLoading ? (
@@ -176,6 +188,11 @@ export default function UsersPage() {
                             <UserCheck size={14} />
                           </button>
                         )}
+                        {u.role !== "super_admin" && (
+                          <button onClick={() => setModulesTarget(u)} className="text-slate-400 hover:text-purple-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`Manage module access for ${u.full_name}`}>
+                            <ShieldCheck size={14} />
+                          </button>
+                        )}
                         <button onClick={() => router.push(`/ims/settings/users/${u.id}/activity`)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label={`View activity for ${u.full_name}`}>
                           <Activity size={14} />
                         </button>
@@ -192,7 +209,7 @@ export default function UsersPage() {
       {/* Create / Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editing ? "Edit User" : "Invite User"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Edit User" : "Create User"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-3 py-2">
               <div>
@@ -239,6 +256,15 @@ export default function UsersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Module access dialog */}
+      {modulesTarget && (
+        <ModuleAccessDialog
+          user={modulesTarget}
+          onClose={() => setModulesTarget(null)}
+          onSaved={() => { qc.invalidateQueries({ queryKey: ["users"] }); setModulesTarget(null); }}
+        />
+      )}
 
       {/* Reset password dialog */}
       {resetTarget && (
@@ -290,6 +316,74 @@ export default function UsersPage() {
     </div>
   );
 }
+
+// ── Module Access Dialog ───────────────────────────────────────────────────────
+function ModuleAccessDialog({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: User;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [selected, setSelected] = useState<Set<ModuleKey>>(
+    new Set(user.allowed_modules ? (user.allowed_modules as ModuleKey[]) : ALL_MODULES)
+  );
+  const isFullAccess = selected.size === ALL_MODULES.length;
+
+  const mut = useMutation({
+    mutationFn: () =>
+      usersApi.updateModules(
+        user.id,
+        isFullAccess ? null : Array.from(selected)
+      ),
+    onSuccess: () => { toast.success("Module access updated"); onSaved(); },
+    onError: (e) => toast.error(getApiError(e, "Failed to update modules")),
+  });
+
+  function toggle(m: ModuleKey) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(m) ? next.delete(m) : next.add(m);
+      return next;
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Module Access — {user.full_name}</DialogTitle>
+          <p className="text-xs text-slate-500 mt-1">Uncheck modules to hide them from this user's sidebar.</p>
+        </DialogHeader>
+        <div className="py-2 space-y-2">
+          {ALL_MODULES.map((m) => (
+            <label key={m} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selected.has(m)}
+                onChange={() => toggle(m)}
+                className="w-4 h-4 accent-blue-600"
+              />
+              <span className="text-sm font-medium text-slate-700">{MODULE_LABELS[m]}</span>
+            </label>
+          ))}
+        </div>
+        {isFullAccess && (
+          <p className="text-xs text-slate-400 px-1">All modules selected — saved as "full access" (no restriction).</p>
+        )}
+        <DialogFooter className="mt-3">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || selected.size === 0}>
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 // ── Reset Password Dialog ──────────────────────────────────────────────────────
 function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => void }) {

@@ -3,7 +3,7 @@ import { use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { clientsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { canEdit } from "@/lib/utils";
+import { canEdit, formatCurrency } from "@/lib/utils";
 import type { Client, Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,7 +130,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   <div key={ap.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium">{ap.product.name}</p>
-                      <p className="text-xs text-slate-500">{ap.product.unit} · ${ap.product.unit_price}</p>
+                      <p className="text-xs text-slate-500">{ap.product.unit} · {formatCurrency(ap.product.unit_price, ap.product.currency)}</p>
                     </div>
                     {canWrite && (
                       <button

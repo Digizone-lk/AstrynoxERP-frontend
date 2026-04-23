@@ -9,6 +9,25 @@ export interface User {
   is_active: boolean;
   created_at: string;
   org_currency: string;
+  allowed_modules: string[] | null;
+}
+
+export type PdfTemplate = "classic" | "modern" | "minimal";
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  logo_url: string | null;
+  pdf_template: PdfTemplate;
 }
 
 export interface Client {

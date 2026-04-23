@@ -28,7 +28,7 @@ import Link from "next/link";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email").or(z.literal("")),
+  email: z.string().email("Valid email is required"),
   phone: z.string(),
   address: z.string(),
   contact_person: z.string(),
@@ -78,9 +78,9 @@ export default function ClientsPage() {
   });
 
   function onSubmit(data: FormData) {
-    // Strip empty strings so optional fields are omitted (backend EmailStr rejects "")
+    // Strip empty strings for optional fields only (email is required and will always be set)
     const clean = Object.fromEntries(
-      Object.entries(data).filter(([, v]) => v !== "")
+      Object.entries(data).filter(([k, v]) => k === "email" || v !== "")
     );
     editing ? updateMut.mutate(clean as FormData) : createMut.mutate(clean as FormData);
   }
@@ -145,7 +145,7 @@ export default function ClientsPage() {
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
               </div>
               <div>
-                <Label className="text-sm">Email</Label>
+                <Label className="text-sm">Email *</Label>
                 <Input className="mt-1" placeholder="contact@acme.com" {...register("email")} />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
               </div>

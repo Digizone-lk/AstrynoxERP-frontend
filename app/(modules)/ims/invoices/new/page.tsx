@@ -33,8 +33,11 @@ export default function NewInvoicePage() {
   });
 
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ["products"],
-    queryFn: () => productsApi.list().then((r) => r.data),
+    queryKey: ["eligible-products", clientId],
+    queryFn: () =>
+      clientId
+        ? clientsApi.getEligibleProducts(clientId).then((r) => r.data)
+        : productsApi.list({ is_global: true }).then((r) => r.data),
   });
 
   const { data: nextNumberData } = useQuery({
@@ -77,7 +80,13 @@ export default function NewInvoicePage() {
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <Label>Client *</Label>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select
+                value={clientId}
+                onValueChange={(val) => {
+                  setClientId(val);
+                  setItems([{ product_name: "", description: "", qty: "1", unit_price: "0" }]);
+                }}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a client first…" />
                 </SelectTrigger>
