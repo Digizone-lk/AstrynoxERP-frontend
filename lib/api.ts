@@ -74,6 +74,10 @@ export const authApi = {
   refreshToken: () => api.post("/api/auth/refresh"),
   logout: () => api.post("/api/auth/logout"),
   me: () => api.get("/api/auth/me"),
+  forgotPassword: (email: string) =>
+    api.post("/api/auth/forgot-password", { email }),
+  resetPassword: (token: string, new_password: string) =>
+    api.post("/api/auth/reset-password", { token, new_password }),
 };
 
 export const clientsApi = {
