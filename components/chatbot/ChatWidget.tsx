@@ -81,18 +81,16 @@ export function ChatWidget({ config }: ChatWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Don't render for roles the backend rejects
-  if (!user || !ALLOWED_ROLES.includes(user.role)) return null;
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [uiMessages, isLoading]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (isOpen) textareaRef.current?.focus();
   }, [isOpen]);
+
+  // Don't render for roles the backend rejects
+  if (!user || !ALLOWED_ROLES.includes(user.role)) return null;
 
   async function handleSend() {
     const message = input.trim();
