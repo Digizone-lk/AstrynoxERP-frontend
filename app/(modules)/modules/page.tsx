@@ -35,13 +35,13 @@ const MODULES: Module[] = [
     bgGlow: "group-hover:shadow-blue-500/20",
   },
   {
-    id: "hris",
+    id: "hrm",
     title: "Human Resource",
-    subtitle: "Integrated System",
+    subtitle: "Management System",
     description:
       "Manage employees, payroll processing, attendance tracking, leave management, and HR analytics all in one place.",
     icon: <Users size={32} />,
-    href: "/hris",
+    href: "/hrm",
     available: false,
     accentColor: "from-violet-500 to-violet-600",
     bgGlow: "group-hover:shadow-violet-500/20",

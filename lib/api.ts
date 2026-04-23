@@ -175,6 +175,14 @@ export const auditApi = {
   list: (params?: object) => api.get("/api/audit", { params }),
 };
 
+export const chatApi = {
+  sendMessage: (message: string, history: unknown[]) =>
+    api.post<{ response: string; history: unknown[] }>("/api/chat/message", {
+      message,
+      history,
+    }),
+};
+
 // Separate axios instance — no baseURL or credentials — for external CDN calls
 const cdnAxios = axios.create();
 
