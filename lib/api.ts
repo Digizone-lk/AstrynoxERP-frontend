@@ -1,6 +1,12 @@
 import axios from "axios";
 import { getAccessToken, setAccessToken, clearAccessToken } from "@/lib/token";
 
+const SKIP_REFRESH_URLS = [
+    "/api/auth/login",
+    "/api/auth/refresh",
+    "/api/auth/register",
+  ];
+
 const api = axios.create({
   baseURL: "",
   withCredentials: true, // send HttpOnly refresh_token cookie on /api/auth/refresh
@@ -26,7 +32,12 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+
+    const isAuthEndpoint = SKIP_REFRESH_URLS.some((url) =>
+        original.url?.includes(url)
+    );
+
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -117,6 +128,7 @@ export const quotationsApi = {
     api.post(`/api/quotations/${id}/convert-to-invoice`),
   downloadPdf: (id: string) =>
     api.get(`/api/quotations/${id}/pdf`, { responseType: "blob" }),
+  emailToClient: (id: string) => api.post(`/api/quotations/${id}/email-client`),
 };
 
 export const invoicesApi = {
@@ -131,6 +143,7 @@ export const invoicesApi = {
   cancel: (id: string) => api.post(`/api/invoices/${id}/cancel`),
   downloadPdf: (id: string) =>
     api.get(`/api/invoices/${id}/pdf`, { responseType: "blob" }),
+  emailToClient: (id: string) => api.post(`/api/invoices/${id}/email-client`),
 };
 
 export const dashboardApi = {
@@ -145,12 +158,19 @@ export const usersApi = {
   list: () => api.get("/api/users"),
   create: (data: object) => api.post("/api/users", data),
   update: (id: string, data: object) => api.patch(`/api/users/${id}`, data),
+  updateModules: (id: string, allowed_modules: string[] | null) =>
+    api.patch(`/api/users/${id}/modules`, { allowed_modules }),
   resetPassword: (id: string, new_password: string) =>
     api.post(`/api/users/${id}/reset-password`, { new_password }),
   deactivate: (id: string) => api.post(`/api/users/${id}/deactivate`),
   reactivate: (id: string) => api.post(`/api/users/${id}/reactivate`),
   getActivity: (id: string, params?: { skip?: number; limit?: number }) =>
     api.get(`/api/users/${id}/activity`, { params }),
+};
+
+export const orgApi = {
+  get: () => api.get("/api/org"),
+  update: (data: object) => api.patch("/api/org", data),
 };
 
 export const profileApi = {

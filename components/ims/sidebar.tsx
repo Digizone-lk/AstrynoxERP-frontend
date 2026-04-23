@@ -15,60 +15,22 @@ import {
   LogOut,
   X,
   LayoutGrid,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const navItems = [
-  {
-    label: "Dashboard",
-    href: "/ims/dashboard",
-    icon: LayoutDashboard,
-    access: () => true,
-  },
-  {
-    label: "Clients",
-    href: "/ims/clients",
-    icon: Users,
-    access: () => true,
-  },
-  {
-    label: "Products",
-    href: "/ims/products",
-    icon: Package,
-    access: () => true,
-  },
-  {
-    label: "Quotations",
-    href: "/ims/quotations",
-    icon: FileText,
-    access: () => true,
-  },
-  {
-    label: "Invoices",
-    href: "/ims/invoices",
-    icon: Receipt,
-    access: () => true,
-  },
-  {
-    label: "Reports",
-    href: "/ims/reports",
-    icon: BarChart2,
-    access: (role: string) => canFinance(role as any),
-  },
-  {
-    label: "Audit Log",
-    href: "/ims/audit-log",
-    icon: ClipboardList,
-    access: (role: string) => canFinance(role as any),
-  },
-  {
-    label: "Users",
-    href: "/ims/settings/users",
-    icon: Settings,
-    access: (role: string) => isAdmin(role as any),
-  },
+  { label: "Dashboard",   href: "/ims/dashboard",       icon: LayoutDashboard, moduleKey: "dashboard",   access: () => true },
+  { label: "Clients",     href: "/ims/clients",          icon: Users,           moduleKey: "clients",     access: () => true },
+  { label: "Products",    href: "/ims/products",         icon: Package,         moduleKey: "products",    access: () => true },
+  { label: "Quotations",  href: "/ims/quotations",       icon: FileText,        moduleKey: "quotations",  access: () => true },
+  { label: "Invoices",    href: "/ims/invoices",         icon: Receipt,         moduleKey: "invoices",    access: () => true },
+  { label: "Reports",     href: "/ims/reports",          icon: BarChart2,       moduleKey: "reports",     access: (role: string) => canFinance(role as any) },
+  { label: "Audit Log",   href: "/ims/audit-log",        icon: ClipboardList,   moduleKey: "reports",     access: (role: string) => canFinance(role as any) },
+  { label: "Users",       href: "/ims/settings/users",   icon: Settings,        moduleKey: null,          access: (role: string) => isAdmin(role as any) },
+  { label: "Org Settings",href: "/ims/settings/org",     icon: Building2,       moduleKey: null,          access: (role: string) => isAdmin(role as any) },
 ];
 
 interface SidebarProps {
@@ -111,7 +73,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         {navItems
-          .filter((item) => item.access(user?.role ?? "viewer"))
+          .filter((item) => {
+            if (!item.access(user?.role ?? "viewer")) return false;
+            // Super admins always see everything
+            if (user?.role === "super_admin") return true;
+            // Items with no moduleKey (admin settings) are role-gated only
+            if (!item.moduleKey) return true;
+            // null allowed_modules = full access
+            const modules = user?.allowed_modules;
+            if (!modules) return true;
+            return modules.includes(item.moduleKey);
+          })
           .map((item) => {
             const active = pathname.startsWith(item.href);
             return (

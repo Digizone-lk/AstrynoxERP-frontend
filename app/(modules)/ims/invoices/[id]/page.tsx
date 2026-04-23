@@ -7,7 +7,7 @@ import { canEdit, canFinance, formatCurrency, formatDate, downloadBlob } from "@
 import type { Invoice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Send, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Download, Send, CheckCircle, XCircle, AlertCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { LineItemsEditor } from "@/components/ims/line-items-editor";
@@ -42,6 +42,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const cancelMut = useMutation({
     mutationFn: () => invoicesApi.cancel(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["invoice", id] }); toast.success("Invoice cancelled"); },
+  });
+
+  const emailMut = useMutation({
+    mutationFn: () => invoicesApi.emailToClient(id),
+    onSuccess: (res) => toast.success((res.data as { message: string }).message),
+    onError: () => toast.error("Failed to email invoice"),
   });
 
   async function handleDownloadPdf() {
@@ -81,6 +87,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
       <div className="flex flex-wrap gap-2 mb-6">
         <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download size={14} className="mr-1" />PDF</Button>
+        {canWrite && (
+          <Button variant="outline" size="sm" onClick={() => emailMut.mutate()} disabled={emailMut.isPending}>
+            <Mail size={14} className="mr-1" />{emailMut.isPending ? "Sending…" : "Email PDF"}
+          </Button>
+        )}
         {canWrite && invoice.status === "draft" && (
           <Button size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending}><Send size={14} className="mr-1" />Send</Button>
         )}

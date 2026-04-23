@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,26 @@ import {
 } from "lucide-react";
 import { ActivitySkeleton } from "@/components/ims/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// ─── Timezone + Language data (derived from browser Intl API, no hardcoding) ──
+
+const ALL_TIMEZONES: string[] =
+  typeof Intl !== "undefined" && "supportedValuesOf" in Intl
+    ? (Intl as { supportedValuesOf: (k: string) => string[] }).supportedValuesOf("timeZone")
+    : ["UTC"];
+
+const LANGUAGE_CODES = [
+  "en", "si", "ta", "hi", "ar", "zh", "fr", "de",
+  "es", "pt", "ru", "ja", "ko", "ms", "id",
+];
+const _displayNames =
+  typeof Intl !== "undefined"
+    ? new Intl.DisplayNames(["en"], { type: "language" })
+    : null;
+const LANGUAGES = LANGUAGE_CODES.map((code) => ({
+  value: code,
+  label: _displayNames?.of(code) ?? code,
+})).sort((a, b) => a.label.localeCompare(b.label));
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
@@ -132,6 +153,63 @@ export default function ProfilePage() {
   );
 }
 
+// ─── Timezone combobox (searchable — 400+ IANA zones need filtering) ─────────
+function TimezoneCombobox({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = query
+    ? ALL_TIMEZONES.filter((tz) =>
+        tz.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 50)
+    : ALL_TIMEZONES.slice(0, 50);
+
+  function handleBlur() {
+    setTimeout(() => {
+      if (!ref.current?.contains(document.activeElement)) setOpen(false);
+    }, 150);
+  }
+
+  return (
+    <div className="relative">
+      <input
+        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1"
+        value={open ? query : value}
+        placeholder="Search timezone…"
+        disabled={disabled}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => { setQuery(""); setOpen(true); }}
+        onBlur={handleBlur}
+      />
+      {open && filtered.length > 0 && (
+        <div
+          ref={ref}
+          className="absolute z-50 w-full mt-1 rounded-md border bg-white shadow-lg max-h-52 overflow-auto text-sm"
+        >
+          {filtered.map((tz) => (
+            <div
+              key={tz}
+              className={`px-3 py-2 cursor-pointer hover:bg-slate-50 ${tz === value ? "bg-blue-50 text-blue-700 font-medium" : ""}`}
+              onMouseDown={(e) => { e.preventDefault(); onChange(tz); setOpen(false); setQuery(""); }}
+            >
+              {tz.replace(/_/g, " ")}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Profile Tab ──────────────────────────────────────────────────────────────
 function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user"]; onUpdate: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -142,7 +220,7 @@ function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user
     queryFn: () => profileApi.get().then((r) => r.data),
   });
 
-  const { register, handleSubmit, formState: { errors, isSubmitting, isDirty } } = useForm<ProfileFormData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting, isDirty } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     values: profile
       ? { full_name: profile.full_name, phone: profile.phone ?? "", job_title: profile.job_title ?? "", timezone: profile.timezone, language: profile.language }
@@ -266,11 +344,34 @@ function ProfileTab({ user, onUpdate }: { user: ReturnType<typeof useAuth>["user
               </div>
               <div>
                 <Label>Timezone</Label>
-                <Input className="mt-1" placeholder="UTC" {...register("timezone")} />
+                <Controller
+                  name="timezone"
+                  control={control}
+                  render={({ field }) => (
+                    <TimezoneCombobox value={field.value} onChange={field.onChange} />
+                  )}
+                />
               </div>
               <div>
                 <Label>Language</Label>
-                <Input className="mt-1" placeholder="en" {...register("language")} />
+                <Controller
+                  name="language"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select language…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGES.map((l) => (
+                          <SelectItem key={l.value} value={l.value}>
+                            {l.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
             <div className="flex justify-end pt-2">

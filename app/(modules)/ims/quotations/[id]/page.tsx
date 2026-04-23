@@ -7,7 +7,7 @@ import { canEdit, canFinance, formatCurrency, formatDate, downloadBlob } from "@
 import type { Quotation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Send, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { ArrowLeft, Download, Send, CheckCircle, XCircle, ArrowRight, Mail } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,6 +52,12 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
     onError: () => toast.error("Failed to convert"),
   });
 
+  const emailMut = useMutation({
+    mutationFn: () => quotationsApi.emailToClient(id),
+    onSuccess: (res) => toast.success((res.data as { message: string }).message),
+    onError: () => toast.error("Failed to email quotation"),
+  });
+
   async function handleDownloadPdf() {
     try {
       const res = await quotationsApi.downloadPdf(id);
@@ -84,6 +90,11 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
 
       <div className="flex flex-wrap gap-2 mb-6">
         <Button variant="outline" size="sm" onClick={handleDownloadPdf}><Download size={14} className="mr-1" />PDF</Button>
+        {canWrite && (
+          <Button variant="outline" size="sm" onClick={() => emailMut.mutate()} disabled={emailMut.isPending}>
+            <Mail size={14} className="mr-1" />{emailMut.isPending ? "Sending…" : "Email PDF"}
+          </Button>
+        )}
         {canWrite && quotation.status === "draft" && (
           <Button size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending}><Send size={14} className="mr-1" />Send</Button>
         )}
