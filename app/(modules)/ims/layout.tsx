@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Sidebar } from "@/components/ims/sidebar";
+import { ChatWidget } from "@/components/chatbot/ChatWidget";
+import { imsConfig } from "@/lib/chatbot/ims-config";
 import { Menu } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -34,6 +36,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">{children}</main>
       </div>
+
+      <ChatWidget config={imsConfig} />
     </div>
   );
 }

@@ -28,7 +28,7 @@ export default function HrisPage() {
         <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
           Human Resource
           <br />
-          <span className="text-violet-400">Integrated System</span>
+          <span className="text-violet-400">Management System</span>
         </h1>
 
         <p className="text-slate-400 text-lg leading-relaxed mb-10">
